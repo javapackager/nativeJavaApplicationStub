@@ -12,64 +12,27 @@ jobs:
     outputs:
       release_version: ${{ steps.tag_name.outputs.release_version }}
     steps:
-      - name: Get version from tag
+      - name: Get version from date
         id: tag_name
         run: echo "release_version=$(date +'%Y%m%d.%H%M%S')" >> $GITHUB_OUTPUT
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v5
       - name: Create draft release
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: gh release create --draft "${{ steps.tag_name.outputs.release_version }}" --generate-notes
-      - name: Upload universalJavaApplicationStub.sh asset
-        env:
-          GH_TOKEN: ${{ github.token }}
-          GH_REPO: ${{ github.repository }}
-        run: |
-          cp ./src/universalJavaApplicationStub ./universalJavaApplicationStub.sh
-          gh release upload "${{ steps.tag_name.outputs.release_version }}" ./universalJavaApplicationStub.sh
 
   compile:
     name: Compile the stub
-    needs: draft_release # we need to know the upload URL
+    needs: draft_release
     runs-on: macos-latest
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v2
-
-      - name: Install shc via HomeBrew
-        run: |
-          brew install shc
-          shc -h
-
-      - name: Compile universalJavaApplicationStub
-        run: |
-          echo "Running shc..."
-          shc -r -f src/universalJavaApplicationStub
-
-      - name: Build universalJavaApplicationStub x86_64
-        run: |
-          echo "Running clang for universalJavaApplicationStub.x86_64"
-          clang -o universalJavaApplicationStub.x86_64 -target x86_64-apple-macos10.10 src/universalJavaApplicationStub.x.c 
-          strip universalJavaApplicationStub.x86_64
-
-      - name: Build universalJavaApplicationStub arm64
-        run: |
-          echo "Running clang for universalJavaApplicationStub.arm64"
-          clang -o universalJavaApplicationStub.arm64 -target arm64-apple-macos11 src/universalJavaApplicationStub.x.c
-          strip universalJavaApplicationStub.arm64
-
-      - name: Build universal universalJavaApplicationStub
-        run: |
-          echo "Runnning lipo"
-          lipo -create -output universalJavaApplicationStub universalJavaApplicationStub.x86_64 universalJavaApplicationStub.arm64
-          strip universalJavaApplicationStub
-          chmod ug=rwx,o=rx universalJavaApplicationStub
+      - uses: actions/checkout@v5
 
       - name: Build nativeJavaApplicationStub
-        run: |
-          make universal
+        run: make universal
 
       - name: Upload compiled assets
         env:
@@ -80,9 +43,6 @@ jobs:
           cp build/arm64/nativeJavaApplicationStub ./nativeJavaApplicationStub.arm64
           cp build/universal/nativeJavaApplicationStub ./nativeJavaApplicationStub
           gh release upload "${{ needs.draft_release.outputs.release_version }}" \
-            ./universalJavaApplicationStub.x86_64 \
-            ./universalJavaApplicationStub.arm64 \
-            ./universalJavaApplicationStub \
             ./nativeJavaApplicationStub.x86_64 \
             ./nativeJavaApplicationStub.arm64 \
             ./nativeJavaApplicationStub
@@ -94,7 +54,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - name: Publish Release
+      - name: Publish release
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}

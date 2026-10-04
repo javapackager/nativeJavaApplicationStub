@@ -1,7 +1,2 @@
 .DS_Store
-
-# shc compiler
-*.x
-*.x.c
-
 build
